@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Monitoring System</title>
+    <div style="text-align:center">
+        <h2 id="clock"></h2>
+    </div>
+
+<!-- -----------------------------------------Inline CSS------------------------------------ -->
+
+<style>
+*{
+    box-sizing:border-box; 
+    font-family:Segoe UI, sans-serif;
+}
+
+body{
+    background:#8d8d85;
+    margin:0;
+    padding:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    background:rgb(250, 249, 249);
+    border-radius:15px;
+    padding:20px;
+    box-shadow:0 3px 10px rgba(0,0,0,.1);
+}
+
+h1{
+    text-align:center;
+    color:#1c3374;
+}
+
+.card{
+    background:#f8fafc;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    margin-bottom:8px;
+    border:1px solid #ccc;
+    border-radius:8px;
+}
+
+button{
+    border:none;
+    padding:12px 18px;
+    border-radius:8px;
+    color:rgb(248, 241, 241);
+    cursor:pointer;
+    margin-right:5px;
+}
+
+.timein{background:#22c55e;}
+.timeout{background:#ef4444;}
+.export{background:#2563eb;}
+.search{background:#7c3aed;}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+table th{
+background:#1e3a8a;
+color:white;
+padding:10px;
+}
+
+table td{
+border:1px solid #ddd;
+padding:10px;
+text-align:center;
+}
+
+.stats{
+display:flex;
+gap:15px;
+flex-wrap:wrap;
+}
+
+.stat{
+flex:1;
+min-width:150px;
+padding:15px;
+border-radius:10px;
+color:white;
+text-align:center;
+}
+
+.blue{background:#2563eb;}
+.green{background:#16a34a;}
+.orange{background:#ea580c;}
+
+.status{
+margin-top:10px;
+font-weight:bold;
+}
+</style>
+
+<!-- ----------------------------------------HTML------------------------------------ -->
+
+</head>
+<body>
+
+<div class="container">
+
+<h1> Local Attendance System</h1>
+
+<div class="stats">
+<div class="stat blue">
+<h3 id="totalRecords">0</h3>
+Records
+</div>
+
+<div class="stat green">
+<h3 id="activeStudents">0</h3>
+Active
+</div>
+
+<div class="stat orange">
+<h3 id="todayLogs">0</h3>
+Today
+</div>
+</div>
+
+<div class="card">
+<h2>Student Attendance</h2>
+
+<input
+type="text"
+id="studentID"
+placeholder="Student ID / USN">
+
+<input
+type="text"
+id="fullName"
+placeholder="Full Name (ALL CAPITAL)">
+
+<input
+type="text"
+id="course"
+placeholder=" Course / Section (optional)">
+
+<button class="timein" onclick="timeIn()"> Time In </button>
+<button class="timeout" onclick="timeOut()"> Time Out </button>
+<button class="export" onclick="exportExcel()"> Export Excel </button>
+<div id="status"></div>
+</div>
+
+                                        <!-- Search function -->
+<div class="card">
+<input type="text" id="searchInput" placeholder="Search Student ID" onkeyup="searchStudent()">
+
+</div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Total Hours</th>
+                <th>Course</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+
+<!-- -----------------------------------------Inline JS------------------------------------ -->
+
+<script>
+
+let attendance = [];
+
+function currentDate(){return new Date().toLocaleDateString();}
+function currentTime(){return new Date().toLocaleTimeString();}
+
+                                            //Timein function naman to
+function timeIn(){
+
+let id =
+document.getElementById("studentID")
+.value.trim();
+
+let fullname =
+document.getElementById("fullName")
+.value.trim();
+
+let course =
+document.getElementById("course")
+.value.trim();
+
+if(!id || !fullname){
+alert("Please complete fields");
+return;
+}
+
+fetch("/api/timein", {
+
+method: "POST",
+
+headers: {
+"Content-Type": "application/json"
+},
+
+body: JSON.stringify({
+student_id: id,
+fullname: fullname,
+course: course
+})
+
+})
+
+.then(res => res.json())
+.then(data => {
+
+status(data.message);
+loadAttendance();
+})
+
+.catch(err => {
+console.error(err);
+status("Error recording attendance");
+});
+}
+
+
+                                                //this is the time out function
+function timeOut(){
+
+let id =
+document.getElementById("studentID")
+.value.trim();
+
+if(!id){
+alert("Enter Student ID");
+return;
+}
+
+fetch("/api/timeout", {
+
+method: "POST",
+
+headers: {
+"Content-Type": "application/json"
+},
+
+body: JSON.stringify({
+student_id: id
+})
+
+})
+
+.then(res => res.json())
+.then(data => {
+
+status(data.message);
+
+loadAttendance();
+
+})
+
+.catch(err => {
+
+console.error(err);
+
+status("Error recording timeout");
+});
+}
+                                                            //para mag load everytiem yugn table eto ynug attendance table
+function loadAttendance(){
+console.log("Loading attendance...");
+fetch("/api/attendance")
+
+.then(res => res.json())
+
+.then(data => {
+
+console.log("Received data:", data);
+
+attendance = data;
+
+let body =
+document.getElementById("tableBody");
+
+body.innerHTML = "";
+
+data.forEach(row => {
+
+body.innerHTML += `
+<tr>
+<td>${row.student_id}</td>
+<td>${row.attendance_date}</td>
+<td>${row.fullname}</td>
+<td>${row.time_in || "-"}</td>
+<td>${row.time_out || "-"}</td>
+<td>${row.total_hours || "-"}</td>
+<td>${row.course || "-"}</td>
+</tr>
+`;
+});
+
+updateStats();
+
+})
+
+.catch(err => {
+console.error("Load error:", err);
+});
+}
+
+
+                                                    //updating the stats
+function updateStats(){
+
+document.getElementById(
+"totalRecords"
+).innerText = attendance.length;
+
+document.getElementById(
+"activeStudents"
+).innerText =
+attendance.filter(r=>!r.time_out).length;
+
+let today =
+new Date()
+.toISOString()
+.split("T")[0];
+
+document.getElementById(
+"todayLogs"
+).innerText =
+attendance.filter(r =>
+r.attendance_date === today).length;
+}
+
+                                                //to search students
+function searchStudent(){
+
+let keyword =
+document.getElementById(
+"searchInput"
+).value.toLowerCase();
+
+let filtered =
+attendance.filter(r =>
+r.student_id
+.toLowerCase()
+.includes(keyword)
+);
+
+let body =
+document.getElementById("tableBody");
+
+body.innerHTML = "";
+
+filtered.forEach(row => {
+
+body.innerHTML += `
+<tr>
+<td>${row.student_id}</td>
+<td>${row.attendance_date}</td>
+<td>${row.fullname}</td>
+<td>${row.time_in || "-"}</td>
+<td>${row.time_out || "-"}</td>
+<td>${row.total_hours || "-"}</td>
+<td>${row.course || "-"}</td>
+</tr>
+`;
+});
+}
+                                                // Exporting EXcel
+function exportExcel(){
+
+window.location.href =
+"/api/export";}
+
+                                                //Lagi kong naaalis toh a
+function status(msg){
+document.getElementById(
+"status"
+).innerText = msg;
+}
+
+                                                                    // Clock
+function updateClock(){
+let now = new Date();
+document.getElementById("clock").innerHTML =
+now.toLocaleString();
+}
+
+setInterval(updateClock,1000);
+updateClock();
+
+loadAttendance();
+setInterval(loadAttendance, 5000);
+
+</script>
+</body>
+</html>
