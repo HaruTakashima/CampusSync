@@ -968,17 +968,16 @@ function clearForm(){
 
 async function loadAttendance(){
     try{
-        const res = await fetch("/api/attendance");
-        if(!res.ok) throw new Error("Could not load attendance.");
+    const res = await fetch("/api/attendance");
+    if(!res.ok) throw new Error("Could not load attendance.");
 
-        attendance = await res.json();
+    attendance = await res.json();
 
-        renderAttendance(attendance);
-        updateStats();
+    // Apply current search after reload
+    searchStudent();
+    updateStats();
     }catch(err){
-        console.error("Load error:", err);
-        document.querySelector(".connection").innerHTML =
-            '<span class="dot" style="background:#dc2626"></span> Server unavailable';
+    console.error("Load error:", err);
     }
 }
 
