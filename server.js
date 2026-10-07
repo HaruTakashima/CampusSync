@@ -1,20 +1,21 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
+const path = require("path");
 const app = express();
+const rootDir = __dirname;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("FrontEnd"));
+app.use(express.static(rootDir));
 
-// For my own html file name instead of index.html
 app.get("/", (req, res) => {
-res.sendFile(__dirname + "index.html");
+res.sendFile(path.join(rootDir, "index.html"));
 });
 
 //Creates a Database if there is none, with the Table
 const db = new sqlite3.Database(
-"./database/attendance.db"
+path.join(rootDir, "Database", "attendance.db")
 );
 
 db.run(`
