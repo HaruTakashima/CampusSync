@@ -9,7 +9,7 @@ app.use(express.static("FrontEnd"));
 
 // For my own html file name instead of index.html
 app.get("/", (req, res) => {
-res.sendFile(__dirname + "/FrontEnd/HTML+CSS+JS.html");
+res.sendFile(__dirname + "HTML+CSS+JS.html");
 });
 
 //Creates a Database if there is none, with the Table
